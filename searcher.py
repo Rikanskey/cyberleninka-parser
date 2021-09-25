@@ -6,6 +6,7 @@ import requests
 from article import Article
 
 TERM_LINK = '"link":'
+TERM_FOUND = '"found":'
 
 API = 'https://cyberleninka.ru/api/search'
 URL = 'https://cyberleninka.ru'
@@ -54,10 +55,10 @@ class Searcher:
 
         return article
 
-    def __try_parse_request(self, body, filters, results):
+    def __try_parse_request(self, body, filters, results, articles_per_page=ARTICLES_PER_PAGE):
         response_json = requests.post(API, data=json.dumps(body)).text
 
-        for article_num in range(ARTICLES_PER_PAGE):
+        for article_num in range(articles_per_page):
             response_json = response_json[response_json.find(TERM_LINK) + len(TERM_LINK) + 1:]
             article_link = response_json[:response_json.find('"')]
             article = self.parse_article_page(URL + article_link)
@@ -67,17 +68,31 @@ class Searcher:
 
     def search_articles(self, keywords, max_page, filters=None):
         results = []
+        found = 0
         body = REQUEST_BODY | {'q': keywords}
 
         if filters:
             body = body | {'catalogs': filters}
 
+        body = body | {'from': 0}
+
+        try:
+            response_json = requests.post(API, data=json.dumps(body)).text
+            response_found = response_json[response_json.find(TERM_FOUND) + len(TERM_FOUND):]
+            found = int(response_found[:response_found.find(',')])
+
+        except requests.HTTPError or AttributeError as e:
+            print(e)
+
         for page in range(max_page):
 
-            body = body | {'from': ARTICLES_PER_PAGE * page}
-
             try:
-                self.__try_parse_request(body, filters, results)
+                if found >= ARTICLES_PER_PAGE:
+                    self.__try_parse_request(body, filters, results)
+                    found -= ARTICLES_PER_PAGE
+                else:
+                    self.__try_parse_request(body, filters, results, found)
+                    return results
 
             except requests.HTTPError as e:
                 print(e)
