@@ -85,7 +85,7 @@ class Searcher:
             print(e)
 
         for page in range(max_page):
-
+            body['from'] += 10 * page
             try:
                 if found >= ARTICLES_PER_PAGE:
                     self.__try_parse_request(body, filters, results)
