@@ -85,12 +85,13 @@ class Searcher:
             print(e)
 
         for page in range(max_page):
-            body['from'] += 10 * page
             try:
                 if found >= ARTICLES_PER_PAGE:
+                    body['from'] += 10 * page
                     self.__try_parse_request(body, filters, results)
                     found -= ARTICLES_PER_PAGE
                 else:
+                    body['from'] += 10 * (page - 1)
                     self.__try_parse_request(body, filters, results, found)
                     return results
 
