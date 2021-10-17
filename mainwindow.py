@@ -2,7 +2,8 @@ from tkinter import *
 from tkinter.ttk import Treeview
 from controller import Controller
 from configuration import CyberleninkaConfiguration
-from webbrowser import open
+from mapwindow import MindMapWindow
+import webbrowser
 
 
 class Widget:
@@ -10,7 +11,10 @@ class Widget:
         self.__controller = Controller()
         self.__configuration = CyberleninkaConfiguration()
         self.__window = Tk()
+        self.__window.title('Cyberleninka parser')
         self.__window.wm_minsize(640, 480)
+
+        self.__mind_map_window = MindMapWindow()
 
         self.__parameters_frame = None
 
@@ -42,6 +46,9 @@ class Widget:
         self.__var_status = None
 
         self.__menu = None
+        self.__wait_window = None
+        self.__wait_status_label = None
+        self.__wait_status_label_var = None
 
     def __drop_filters_button_clicked(self):
         self.__var_filter.set(0)
@@ -120,7 +127,29 @@ class Widget:
 
     def __open(self):
         item = self.__table_frame.focus()
-        open(self.__table_frame.item(item)['values'][2])
+        webbrowser.open(self.__table_frame.item(item)['values'][2])
+
+    def __configure_wait_window(self):
+        self.__wait_window = Toplevel(self.__window)
+        self.__wait_window.title('Wait')
+        self.__wait_window.maxsize(150, 30)
+        self.__wait_window.minsize(150, 30)
+        self.__wait_status_label_var = StringVar()
+        self.__wait_status_label_var.set('Creating mind-map...')
+        self.__wait_status_label = Label(self.__wait_window, textvariable=self.__wait_status_label_var)
+        self.__wait_status_label.pack()
+        self.__wait_window.geometry('+%d+%d' % (self.__window.winfo_screenwidth() / 2,
+                                                self.__window.winfo_screenheight() / 2))
+
+    def __create_mind_map(self):
+        self.__configure_wait_window()
+        self.__wait_window.update()
+        item = self.__table_frame.focus()
+        flag = self.__mind_map_window.draw_map(self.__table_frame.item(item)['values'][2])
+        if flag:
+            self.__wait_window.destroy()
+        else:
+            self.__wait_status_label_var.set('No keywords')
 
     def __popup_menu(self, event):
         self.__table_frame.identify_row(event.y)
@@ -152,6 +181,7 @@ class Widget:
 
         self.__menu = Menu(self.__table_frame, tearoff=0)
         self.__menu.add_command(command=self.__open, label='Open link')
+        self.__menu.add_command(command=self.__create_mind_map, label='Mind-map')
         self.__table_frame.bind('<Button-2>', self.__popup_menu)
 
         self.__table_frame.pack(side=TOP, fill=BOTH, expand=True)
